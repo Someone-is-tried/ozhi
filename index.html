@@ -2,29 +2,64 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
-  <title>五子棋 AI</title>
+  <title>五子棋 AI 手機版</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    canvas {
-      background-color: #FFCC99;
-      display: block;
-      margin: 20px auto;
-      border: 2px solid black;
-    }
     body {
+      margin: 0;
+      padding: 0;
       text-align: center;
       font-family: "微軟正黑體", sans-serif;
+      background-color: #fef8f4;
+    }
+
+    h1 {
+      margin: 10px 0;
+    }
+
+    canvas {
+      background-color: #FFCC99;
+      border: 2px solid #000;
+      touch-action: none;
+    }
+
+    #info {
+      margin: 10px;
+      font-size: 1.2em;
+    }
+
+    #aiButton {
+      margin: 10px;
+      padding: 10px 20px;
+      font-size: 1em;
+      border: none;
+      border-radius: 10px;
+      background-color: #444;
+      color: white;
+    }
+
+    @media (max-width: 600px) {
+      canvas {
+        width: 95vw;
+        height: 95vw;
+      }
     }
   </style>
 </head>
 <body>
-  <h1>五子棋（Z 鍵開關 AI）</h1>
+  <h1>五子棋（AI 模式）</h1>
+  <div id="info">目前輪到：<span id="turn">黑棋</span></div>
+  <button id="aiButton">AI 模式：關</button><br>
   <canvas id="board" width="600" height="600"></canvas>
+
   <script>
     const canvas = document.getElementById("board");
     const ctx = canvas.getContext("2d");
+    const info = document.getElementById("turn");
+    const aiButton = document.getElementById("aiButton");
 
     const gridSize = 15;
-    const gridWidth = 40;
+    const gridWidth = canvas.width / gridSize;
     const circleRadius = gridWidth / 3;
 
     let board = Array.from({ length: gridSize }, () => Array(gridSize).fill(null));
@@ -133,22 +168,29 @@
 
     function showWinner(winner) {
       setTimeout(() => {
-        alert(`${winner} Win!`);
+        alert(`${winner === black ? "黑棋" : "白棋"} 獲勝！`);
         location.reload();
       }, 100);
     }
 
-    canvas.addEventListener("click", (e) => {
-      const col = Math.floor(e.offsetX / gridWidth);
-      const row = Math.floor(e.offsetY / gridWidth);
-      if (board[row][col] !== null || currentPlayer === white && aiEnabled) return;
+    function updateTurnText() {
+      info.textContent = currentPlayer === black ? "黑棋" : "白棋";
+    }
+
+    function handleClick(x, y) {
+      const col = Math.floor(x / gridWidth);
+      const row = Math.floor(y / gridWidth);
+      if (board[row][col] !== null || (currentPlayer === white && aiEnabled)) return;
+
       board[row][col] = currentPlayer;
       if (checkWin(row, col)) {
         drawBoard();
         showWinner(currentPlayer);
         return;
       }
+
       currentPlayer = currentPlayer === black ? white : black;
+      updateTurnText();
       drawBoard();
 
       if (aiEnabled && currentPlayer === white) {
@@ -159,19 +201,34 @@
           showWinner(white);
         } else {
           currentPlayer = black;
+          updateTurnText();
           drawBoard();
         }
       }
+    }
+
+    canvas.addEventListener("click", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      handleClick(x, y);
     });
 
-    window.addEventListener("keydown", (e) => {
-      if (e.key === "z" || e.key === "Z") {
-        aiEnabled = !aiEnabled;
-        alert("AI模式：" + (aiEnabled ? "開啟" : "關閉"));
-      }
+    canvas.addEventListener("touchstart", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const touch = e.touches[0];
+      const x = touch.clientX - rect.left;
+      const y = touch.clientY - rect.top;
+      handleClick(x, y);
+    });
+
+    aiButton.addEventListener("click", () => {
+      aiEnabled = !aiEnabled;
+      aiButton.textContent = "AI 模式：" + (aiEnabled ? "開" : "關");
     });
 
     drawBoard();
+    updateTurnText();
   </script>
 </body>
 </html>
