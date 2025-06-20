@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>五子棋 AI</title>
+  <style>
+    canvas {
+      background-color: #FFCC99;
+      display: block;
+      margin: 20px auto;
+      border: 2px solid black;
+    }
+    body {
+      text-align: center;
+      font-family: "微軟正黑體", sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <h1>五子棋（Z 鍵開關 AI）</h1>
+  <canvas id="board" width="600" height="600"></canvas>
+  <script>
+    const canvas = document.getElementById("board");
+    const ctx = canvas.getContext("2d");
+
+    const gridSize = 15;
+    const gridWidth = 40;
+    const circleRadius = gridWidth / 3;
+
+    let board = Array.from({ length: gridSize }, () => Array(gridSize).fill(null));
+    let currentPlayer = "Black";
+    const black = "Black", white = "White";
+    let aiEnabled = false;
+
+    function drawBoard() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let i = 0; i < gridSize; i++) {
+        ctx.beginPath();
+        ctx.moveTo(gridWidth / 2 + i * gridWidth, 0);
+        ctx.lineTo(gridWidth / 2 + i * gridWidth, canvas.height);
+        ctx.moveTo(0, gridWidth / 2 + i * gridWidth);
+        ctx.lineTo(canvas.width, gridWidth / 2 + i * gridWidth);
+        ctx.strokeStyle = "black";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      for (let row = 0; row < gridSize; row++) {
+        for (let col = 0; col < gridSize; col++) {
+          if (board[row][col]) {
+            ctx.beginPath();
+            ctx.arc(
+              col * gridWidth + gridWidth / 2,
+              row * gridWidth + gridWidth / 2,
+              circleRadius,
+              0, Math.PI * 2
+            );
+            ctx.fillStyle = board[row][col] === black ? "black" : "white";
+            ctx.fill();
+            ctx.stroke();
+          }
+        }
+      }
+    }
+
+    function checkWin(row, col) {
+      const directions = [
+        [[0, 1], [0, -1]],
+        [[1, 0], [-1, 0]],
+        [[1, 1], [-1, -1]],
+        [[1, -1], [-1, 1]],
+      ];
+
+      for (const dir of directions) {
+        let count = 1;
+        for (const [dx, dy] of dir) {
+          let x = row + dx, y = col + dy;
+          while (x >= 0 && x < gridSize && y >= 0 && y < gridSize && board[x][y] === currentPlayer) {
+            count++;
+            x += dx;
+            y += dy;
+          }
+        }
+        if (count >= 5) return true;
+      }
+      return false;
+    }
+
+    function evaluate() {
+      let bestScore = 0;
+      let bestMove = [7, 7];
+
+      for (let row = 0; row < gridSize; row++) {
+        for (let col = 0; col < gridSize; col++) {
+          if (board[row][col]) continue;
+          let score = 0;
+          for (const player of [black, white]) {
+            let base = player === white ? 10 : 1;
+            for (const [[dx1, dy1], [dx2, dy2]] of [
+              [[0, 1], [0, -1]],
+              [[1, 0], [-1, 0]],
+              [[1, 1], [-1, -1]],
+              [[1, -1], [-1, 1]],
+            ]) {
+              let count = 0;
+              let x = row + dx1, y = col + dy1;
+              while (x >= 0 && x < gridSize && y >= 0 && y < gridSize && board[x][y] === player) {
+                count++;
+                x += dx1;
+                y += dy1;
+              }
+              x = row + dx2, y = col + dy2;
+              while (x >= 0 && x < gridSize && y >= 0 && y < gridSize && board[x][y] === player) {
+                count++;
+                x += dx2;
+                y += dy2;
+              }
+              if (count >= 4) {
+                count *= (player === white) ? 3 : 2.5;
+              }
+              score += count * count * 10 + base;
+            }
+          }
+
+          if (score > bestScore) {
+            bestScore = score;
+            bestMove = [row, col];
+          }
+        }
+      }
+      return bestMove;
+    }
+
+    function showWinner(winner) {
+      setTimeout(() => {
+        alert(`${winner} Win!`);
+        location.reload();
+      }, 100);
+    }
+
+    canvas.addEventListener("click", (e) => {
+      const col = Math.floor(e.offsetX / gridWidth);
+      const row = Math.floor(e.offsetY / gridWidth);
+      if (board[row][col] !== null || currentPlayer === white && aiEnabled) return;
+      board[row][col] = currentPlayer;
+      if (checkWin(row, col)) {
+        drawBoard();
+        showWinner(currentPlayer);
+        return;
+      }
+      currentPlayer = currentPlayer === black ? white : black;
+      drawBoard();
+
+      if (aiEnabled && currentPlayer === white) {
+        const [aiRow, aiCol] = evaluate();
+        board[aiRow][aiCol] = white;
+        if (checkWin(aiRow, aiCol)) {
+          drawBoard();
+          showWinner(white);
+        } else {
+          currentPlayer = black;
+          drawBoard();
+        }
+      }
+    });
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "z" || e.key === "Z") {
+        aiEnabled = !aiEnabled;
+        alert("AI模式：" + (aiEnabled ? "開啟" : "關閉"));
+      }
+    });
+
+    drawBoard();
+  </script>
+</body>
+</html>
